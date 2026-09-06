@@ -3,7 +3,6 @@ name: Build Rokid APK
 on:
   push:
     branches: [main, master]
-  pull_request:
   workflow_dispatch:
 
 jobs:
@@ -23,69 +22,13 @@ jobs:
           java-version: "17"
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-
-      - name: Patch settings.gradle.kts to add Rokid Maven repo
+      - name: Patch gradle files for Rokid support
         working-directory: ai_assistant
         run: |
-          cat > settings.gradle.kts <<'EOF'
-          pluginManagement {
-              repositories {
-                  google()
-                  mavenCentral()
-                  gradlePluginPortal()
-              }
-          }
-
-          dependencyResolutionManagement {
-              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-              repositories {
-                  google()
-                  mavenCentral()
-                  exclusiveContent {
-                      forRepository {
-                          maven { url = uri("https://maven.rokid.com/repository/maven-public/") }
-                      }
-                      filter {
-                          includeGroupByRegex("com\\.rokid(\\..+)?")
-                      }
-                  }
-              }
-          }
-
-          rootProject.name = "xgGlass-ai-assistant"
-          include(":app")
-          EOF
-
-      - name: Patch app/build.gradle.kts to use xgglass-universal (Rokid)
-        working-directory: ai_assistant
-        run: |
-          python3 - <<'PY'
-          import re
-          p = "app/build.gradle.kts"
-          s = open(p, encoding="utf-8").read()
-          old = '''    implementation("io.github.hkust-spark:xgglass-core:0.3.0")
-              implementation("io.github.hkust-spark:xgglass-core-android:0.3.0")
-              implementation("io.github.hkust-spark:xgglass-device-simulator:0.3.0")'''
-          new = '''    implementation("io.github.hkust-spark:xgglass-universal:0.3.0")'''
-          if old in s:
-              s = s.replace(old, new)
-          else:
-              s = re.sub(
-                  r'implementation("io.github.hkust-spark:xgglass-(?:core|core-android|device-simulator):0.3.0")
-?s*',
-                  '', s)
-              if "xgglass-universal" not in s:
-                  s = s.replace(
-                      "androidx.appcompat:appcompat:1.7.1",
-                      'androidx.appcompat:appcompat:1.7.1"
-    implementation("io.github.hkust-spark:xgglass-universal:0.3.0')
-          open(p, "w", encoding="utf-8").write(s)
-          print(s)
-          PY
+          echo "cGx1Z2luTWFuYWdlbWVudCB7CiAgICByZXBvc2l0b3JpZXMgewogICAgICAgIGdvb2dsZSgpCiAgICAgICAgbWF2ZW5DZW50cmFsKCkKICAgICAgICBncmFkbGVQbHVnaW5Qb3J0YWwoKQogICAgfQp9CgpkZXBlbmRlbmN5UmVzb2x1dGlvbk1hbmFnZW1lbnQgewogICAgcmVwb3NpdG9yaWVzTW9kZS5zZXQoUmVwb3NpdG9yaWVzTW9kZS5GQUlMX09OX1BST0pFQ1RfUkVQT1MpCiAgICByZXBvc2l0b3JpZXMgewogICAgICAgIGdvb2dsZSgpCiAgICAgICAgbWF2ZW5DZW50cmFsKCkKICAgICAgICBleGNsdXNpdmVDb250ZW50IHsKICAgICAgICAgICAgZm9yUmVwb3NpdG9yeSB7CiAgICAgICAgICAgICAgICBtYXZlbiB7IHVybCA9IHVyaSgiaHR0cHM6Ly9tYXZlbi5yb2tpZC5jb20vcmVwb3NpdG9yeS9tYXZlbi1wdWJsaWMvIikgfQogICAgICAgICAgICB9CiAgICAgICAgICAgIGZpbHRlciB7CiAgICAgICAgICAgICAgICBpbmNsdWRlR3JvdXBCeVJlZ2V4KCJjb21cXC5yb2tpZChcXC4uKyk/IikKICAgICAgICAgICAgfQogICAgICAgIH0KICAgIH0KfQoKcm9vdFByb2plY3QubmFtZSA9ICJ4Z0dsYXNzLWFpLWFzc2lzdGFudCIKaW5jbHVkZSgiOmFwcCIpCg==" | base64 -d > settings.gradle.kts
+          sed -i -e '/xgglass-core.*:0.3.0"/d' -e 's|xgglass-device-simulator:0.3.0|xgglass-universal:0.3.0|' app/build.gradle.kts
 
       - name: Build debug APK
         working-directory: ai_assistant
